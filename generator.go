@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"unicode"
 )
@@ -14,6 +15,7 @@ type Generator struct {
 	resolver *RefResolver
 	Structs  map[string]Struct
 	Aliases  map[string]Field
+	Consts   map[string]ConstDefinition
 	// cache for reference types; k=url v=type
 	refs      map[string]string
 	anonCount int
@@ -26,6 +28,7 @@ func New(schemas ...*Schema) *Generator {
 		resolver: NewRefResolver(schemas),
 		Structs:  make(map[string]Struct),
 		Aliases:  make(map[string]Field),
+		Consts:   make(map[string]ConstDefinition),
 		refs:     make(map[string]string),
 	}
 }
@@ -90,16 +93,39 @@ func (g *Generator) processReference(schema *Schema) (string, error) {
 	return refSchema.GeneratedType, nil
 }
 
-// returns the type refered to by schema after resolving all dependencies
+// returns the type referred to by schema after resolving all dependencies
 func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string, err error) {
 	if len(schema.Definitions) > 0 {
 		g.processDefinitions(schema)
 	}
 	schema.FixMissingTypeValue()
+	if schema.Reference != "" {
+		return g.processReference(schema)
+	}
+
 	// if we have multiple schema types, the golang type will be interface{}
 	typ = "interface{}"
 	types, isMultiType := schema.MultiType()
+	isNullable := false
+	isRequired := false
+	if schema.Parent != nil {
+		for _, field := range schema.Parent.Required {
+			if getGolangName(field) == schemaName {
+				isRequired = true
+				break
+			}
+		}
+	}
 	if len(types) > 0 {
+		for _, schemaType := range types {
+			if schemaType == "null" {
+				isNullable = true
+				if len(types) == 2 {
+					// Don't treat it as multi-type if one of them is null
+					isMultiType = false
+				}
+			}
+		}
 		for _, schemaType := range types {
 			name := schemaName
 			if isMultiType {
@@ -122,52 +148,88 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 				if !isMultiType {
 					return rv, nil
 				}
+			case "null":
+				// Skip
 			default:
-				rv, err := getPrimitiveTypeName(schemaType, "", false)
+				rv, err := getPrimitiveTypeName(schemaType, "", isNullable || !isRequired)
 				if err != nil {
 					return "", err
 				}
 				if !isMultiType {
+					if len(schema.Enum) > 0 {
+						rv, err = g.processEnum(name, rv, isNullable || !isRequired, schema)
+						if err != nil {
+							return "", err
+						}
+					}
 					return rv, nil
 				}
 			}
 		}
-	} else {
-		if schema.Reference != "" {
-			return g.processReference(schema)
+	}
+
+	return // return interface{}
+}
+
+func (g *Generator) processEnum(fieldName, primitiveTypeName string, isNullable bool, schema *Schema) (string, error) {
+	// For now only string enum is handled
+	if primitiveTypeName != "string" && primitiveTypeName != "*string" && primitiveTypeName != "*int" && primitiveTypeName != "int" {
+		return "", errors.New(fmt.Sprintf("only enum type strings handled %+v", primitiveTypeName))
+	}
+	typeName := "Enum" + normalizeStringToName(fieldName)
+	g.Aliases[typeName] = Field{
+		Name: typeName,
+		Type: "string",
+	}
+	for _, enumVal := range schema.Enum {
+		if enumVal == nil {
+			continue
+		}
+		enumValString := fmt.Sprintf("%v", enumVal)
+		constName := typeName + normalizeStringToName(enumValString)
+		g.Consts[constName] = ConstDefinition{
+			Type:  typeName,
+			Name:  constName,
+			Value: enumValString,
 		}
 	}
-	return // return interface{}
+
+	if isNullable {
+		typeName = "*" + typeName
+	}
+	return typeName, nil
 }
 
 // name: name of this array, usually the js key
 // schema: items element
 func (g *Generator) processArray(name string, schema *Schema) (typeStr string, err error) {
-	if schema.Items != nil {
-		// subType: fallback name in case this array contains inline object without a title
-		subName := g.getSchemaName(name+"Items", schema.Items)
-		subTyp, err := g.processSchema(subName, schema.Items)
-		if err != nil {
-			return "", err
-		}
-		finalType, err := getPrimitiveTypeName("array", subTyp, true)
-		if err != nil {
-			return "", err
-		}
-		// only alias root arrays
-		if schema.Parent == nil {
-			array := Field{
-				Name:        name,
-				JSONName:    "",
-				Type:        finalType,
-				Required:    contains(schema.Required, name),
-				Description: schema.Description,
-			}
-			g.Aliases[array.Name] = array
-		}
-		return finalType, nil
+	if schema.Items == nil {
+		return "[]interface{}", nil
 	}
-	return "[]interface{}", nil
+
+	// subType: fallback name in case this array contains inline object without a title
+	subName := g.getSchemaName(name+"Item", schema.Items)
+	subTyp, err := g.processSchema(subName, schema.Items)
+	if err != nil {
+		return "", err
+	}
+	finalType, err := getPrimitiveTypeName("array", subTyp, true)
+	if err != nil {
+		return "", err
+	}
+	// only alias root arrays
+	if schema.Parent == nil {
+		array := Field{
+			Name:        name,
+			JSONName:    "",
+			Type:        finalType,
+			Required:    contains(schema.Required, name),
+			Description: schema.Description,
+		}
+		g.Aliases[array.Name] = array
+	}
+	return finalType, nil
+
 }
 
 // name: name of the struct (calculated by caller)
@@ -273,6 +335,10 @@ func contains(s []string, e string) bool {
 }
 
 func getPrimitiveTypeName(schemaType string, subType string, pointer bool) (name string, err error) {
+	prefix := ""
+	if pointer {
+		prefix = "*"
+	}
 	switch schemaType {
 	case "array":
 		if subType == "" {
@@ -280,23 +346,20 @@ func getPrimitiveTypeName(schemaType string, subType string, pointer bool) (name
 		}
 		return "[]" + subType, nil
 	case "boolean":
-		return "bool", nil
+		return prefix + "bool", nil
 	case "integer":
-		return "int", nil
+		return prefix + "int", nil
 	case "number":
-		return "float64", nil
+		return prefix + "float64", nil
 	case "null":
 		return "nil", nil
 	case "object":
 		if subType == "" {
 			return "error_creating_object", errors.New("can't create an object of an empty subtype")
 		}
-		if pointer {
-			return "*" + subType, nil
-		}
-		return subType, nil
+		return prefix + subType, nil
 	case "string":
-		return "string", nil
+		return prefix + "string", nil
 	}
 
 	return "undefined", fmt.Errorf("failed to get a primitive type for schemaType %s and subtype %s",
@@ -370,6 +433,17 @@ func capitaliseFirstLetter(s string) string {
 	return strings.ToUpper(prefix) + suffix
 }
 
+func normalizeStringToName(s string) string {
+	re := regexp.MustCompile("[-_]")
+	words := re.Split(s, -1)
+	normalized := ""
+	for _, word := range words {
+		normalized += capitaliseFirstLetter(word)
+	}
+
+	return normalized
+}
+
 // Struct defines the data required to generate a struct in Go.
 type Struct struct {
 	// The ID within the JSON schema, e.g. #/definitions/address
@@ -395,5 +469,15 @@ type Field struct {
 	Type string
 	// Required is set to true when the field is required.
 	Required    bool
+	Description string
+}
+
+type ConstDefinition struct {
+	// The golang name, e.g. "Address1"
+	Name string
+	// The golang type of the field, e.g. a built-in type like "string" or the name of a struct generated
+	// from the JSON schema.
+	Type        string
+	Value       interface{}
 	Description string
 }

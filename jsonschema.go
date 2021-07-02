@@ -28,6 +28,9 @@ type Schema struct {
 	// http://json-schema.org/draft-07/json-schema-validation.html#rfc.section.6.1.1
 	TypeValue interface{} `json:"type"`
 
+	// http://json-schema.org/draft-07/json-schema-validation.html#rfc.section.6.1.1
+	Enum []interface{} `json:"enum"`
+
 	// Definitions are inline re-usable schemas.
 	// http://json-schema.org/draft-07/json-schema-validation.html#rfc.section.9
 	Definitions map[string]*Schema
@@ -151,6 +154,10 @@ func (schema *Schema) Type() (firstOrDefault string, multiple bool) {
 
 // MultiType returns "type" as an array
 func (schema *Schema) MultiType() ([]string, bool) {
+	if len(schema.OneOf) > 1 || len(schema.AnyOf) > 1 {
+		return nil, true
+	}
+
 	// We've got a single value, e.g. { "type": "object" }
 	if ts, ok := schema.TypeValue.(string); ok {
 		return []string{ts}, false
