@@ -1,10 +1,10 @@
 package test
 
 import (
-	"testing"
-	gen "github.com/a-h/generate/test/additionalPropertiesMarshal_gen"
 	"encoding/json"
+	gen "github.com/michalq/generate/test/additionalPropertiesMarshal_gen"
 	"reflect"
+	"testing"
 )
 
 func TestApRefNoProp(t *testing.T) {

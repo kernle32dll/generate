@@ -47,7 +47,7 @@ func TestFieldGeneration(t *testing.T) {
 		"property1": {TypeValue: "string"},
 		"property2": {Reference: "#/definitions/address"},
 		// test sub-objects with properties or additionalProperties
-		"property3": {TypeValue: "object", Title: "SubObj1", Properties: map[string]*Schema{"name": {TypeValue: "string"}}},
+		"property3": {TypeValue: "object", Title: "SubObj1", Required: []string{"name"}, Properties: map[string]*Schema{"name": {TypeValue: "string"}}},
 		"property4": {TypeValue: "object", Title: "SubObj2", AdditionalProperties: &AdditionalProperties{TypeValue: "integer"}},
 		// test sub-objects with properties composed of objects
 		"property5": {TypeValue: "object", Title: "SubObj3", Properties: map[string]*Schema{"SubObj3a": {TypeValue: "object", Properties: map[string]*Schema{"subproperty1": {TypeValue: "integer"}}}}},
@@ -85,21 +85,34 @@ func TestFieldGeneration(t *testing.T) {
 		t.Errorf("Expected 8 results, but got %d results", len(g.Structs))
 	}
 
-	testField(g.Structs["TestFieldGeneration"].Fields["Property1"], "property1", "Property1", "string", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property2"], "property2", "Property2", "*Address", true, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property3"], "property3", "Property3", "*SubObj1", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property4"], "property4", "Property4", "map[string]int", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property5"], "property5", "Property5", "*SubObj3", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property6"], "property6", "Property6", "map[string]*SubObj4a", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property7"], "property7", "Property7", "*Property7", false, t)
-	testField(g.Structs["TestFieldGeneration"].Fields["Property8"], "property8", "Property8", "*SubObj5", false, t)
+	testField("it should render pointer type for not required value",
+		g.Structs["TestFieldGeneration"].Fields["Property1"], "property1", "Property1", "*string", false, t)
+	testField("it should render pointer type for Address",
+		g.Structs["TestFieldGeneration"].Fields["Property2"], "property2", "Property2", "*Address", true, t)
+	testField("it should render pointer type for SubObj1",
+		g.Structs["TestFieldGeneration"].Fields["Property3"], "property3", "Property3", "*SubObj1", false, t)
+	testField("it should render map of int for additional properties of type int",
+		g.Structs["TestFieldGeneration"].Fields["Property4"], "property4", "Property4", "map[string]int", false, t)
+	testField("it should render pointer type for SubObj3",
+		g.Structs["TestFieldGeneration"].Fields["Property5"], "property5", "Property5", "*SubObj3", false, t)
+	testField("it should render map of object SubObj4a",
+		g.Structs["TestFieldGeneration"].Fields["Property6"], "property6", "Property6", "map[string]*SubObj4a", false, t)
+	testField("it should render pointer type for Property7",
+		g.Structs["TestFieldGeneration"].Fields["Property7"], "property7", "Property7", "*Property7", false, t)
+	testField("it should render pointer type for SubObj5",
+		g.Structs["TestFieldGeneration"].Fields["Property8"], "property8", "Property8", "*SubObj5", false, t)
 
-	testField(g.Structs["SubObj1"].Fields["Name"], "name", "Name", "string", false, t)
-	testField(g.Structs["SubObj3"].Fields["SubObj3a"], "SubObj3a", "SubObj3a", "*SubObj3a", false, t)
-	testField(g.Structs["SubObj4a"].Fields["Subproperty1"], "subproperty1", "Subproperty1", "int", false, t)
+	testField("it should render name with type string for required value",
+		g.Structs["SubObj1"].Fields["Name"], "name", "Name", "string", true, t)
+	testField("it should render SubObj3a",
+		g.Structs["SubObj3"].Fields["SubObj3a"], "SubObj3a", "SubObj3a", "*SubObj3a", false, t)
+	testField("it should render Subproperty1 of type *int since is not required",
+		g.Structs["SubObj4a"].Fields["Subproperty1"], "subproperty1", "Subproperty1", "*int", false, t)
 
-	testField(g.Structs["SubObj5"].Fields["Name"], "name", "Name", "string", false, t)
-	testField(g.Structs["SubObj5"].Fields["AdditionalProperties"], "-", "AdditionalProperties", "map[string]int", false, t)
+	testField("it should render name as *string since is not required",
+		g.Structs["SubObj5"].Fields["Name"], "name", "Name", "string", false, t)
+	testField("it should render SubObj5 with additional properties as string map of int ",
+		g.Structs["SubObj5"].Fields["AdditionalProperties"], "-", "AdditionalProperties", "map[string]int", false, t)
 
 	if strct, ok := g.Structs["Property7"]; !ok {
 		t.Fatal("Property7 wasn't generated")
@@ -113,6 +126,7 @@ func TestFieldGeneration(t *testing.T) {
 func TestFieldGenerationWithArrayReferences(t *testing.T) {
 	properties := map[string]*Schema{
 		"property1": {TypeValue: "string"},
+		"property5": {TypeValue: "string"},
 		"property2": {
 			TypeValue: "array",
 			Items: &Schema{
@@ -134,7 +148,7 @@ func TestFieldGenerationWithArrayReferences(t *testing.T) {
 		},
 	}
 
-	requiredFields := []string{"property2"}
+	requiredFields := []string{"property1", "property2"}
 
 	root := Schema{
 		SchemaType: "http://localhost",
@@ -163,25 +177,33 @@ func TestFieldGenerationWithArrayReferences(t *testing.T) {
 		t.Errorf("Expected 3 results, but got %d results", len(g.Structs))
 	}
 
-	testField(g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property1"], "property1", "Property1", "string", false, t)
-	testField(g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property2"], "property2", "Property2", "[]*Address", true, t)
-	testField(g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property3"], "property3", "Property3", "[]map[string]int", false, t)
-	testField(g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property4"], "property4", "Property4", "[][]*Inner", false, t)
+	testField("it should not create pointer value if field is required",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property1"], "property1", "Property1", "string", true, t)
+	testField("it should create pointer value if field is not required",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property5"], "property5", "Property5", "*string", false, t)
+	testField("it should create array of referenced type",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property2"], "property2", "Property2", "[]*Address", true, t)
+	testField("it should create a map that additional properties are int",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property3"], "property3", "Property3", "[]map[string]int", false, t)
+	testField("it should create array of array of object",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property4"], "property4", "Property4", "[][]*Inner", false, t)
 }
 
-func testField(actual Field, expectedJSONName string, expectedName string, expectedType string, expectedToBeRequired bool, t *testing.T) {
-	if actual.JSONName != expectedJSONName {
-		t.Errorf("JSONName - expected \"%s\", got \"%s\"", expectedJSONName, actual.JSONName)
-	}
-	if actual.Name != expectedName {
-		t.Errorf("Name - expected \"%s\", got \"%s\"", expectedName, actual.Name)
-	}
-	if actual.Type != expectedType {
-		t.Errorf("Type - expected \"%s\", got \"%s\"", expectedType, actual.Type)
-	}
-	if actual.Required != expectedToBeRequired {
-		t.Errorf("Required - expected \"%v\", got \"%v\"", expectedToBeRequired, actual.Required)
-	}
+func testField(testName string, actual Field, expectedJSONName string, expectedName string, expectedType string, expectedToBeRequired bool, t *testing.T) {
+	t.Run(testName, func(t *testing.T) {
+		if actual.JSONName != expectedJSONName {
+			t.Errorf("JSONName - expected \"%s\", got \"%s\"", expectedJSONName, actual.JSONName)
+		}
+		if actual.Name != expectedName {
+			t.Errorf("Name - expected \"%s\", got \"%s\"", expectedName, actual.Name)
+		}
+		if actual.Type != expectedType {
+			t.Errorf("Type - expected \"%s\", got \"%s\"", expectedType, actual.Type)
+		}
+		if actual.Required != expectedToBeRequired {
+			t.Errorf("Required - expected \"%v\", got \"%v\"", expectedToBeRequired, actual.Required)
+		}
+	})
 }
 
 func TestNestedStructGeneration(t *testing.T) {
@@ -691,19 +713,19 @@ func TestTypeAliases(t *testing.T) {
 		structs, aliases int
 	}{
 		{
-			gotype:  "string",
+			gotype:  "*string",
 			input:   &Schema{TypeValue: "string"},
 			structs: 0,
 			aliases: 1,
 		},
 		{
-			gotype:  "int",
+			gotype:  "*int",
 			input:   &Schema{TypeValue: "integer"},
 			structs: 0,
 			aliases: 1,
 		},
 		{
-			gotype:  "bool",
+			gotype:  "*bool",
 			input:   &Schema{TypeValue: "boolean"},
 			structs: 0,
 			aliases: 1,

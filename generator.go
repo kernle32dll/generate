@@ -93,6 +93,29 @@ func (g *Generator) processReference(schema *Schema) (string, error) {
 	return refSchema.GeneratedType, nil
 }
 
+func (g *Generator) isRequired(schemaName string, schema *Schema) bool {
+	isRequired := false
+	if schema.Parent != nil {
+		tp, _ := schema.Parent.Type()
+		// If this is subtype of map or array, then value is always required.
+		// Otherwise map element or array item just not exist. Value still can be nullable.
+		if schema.Parent.AdditionalProperties != nil &&
+			schema.Parent.AdditionalProperties.AdditionalPropertiesBool == nil {
+			return true
+		}
+		if tp == "array" {
+			return true
+		}
+		for _, field := range schema.Parent.Required {
+			if getGolangName(field) == schemaName {
+				isRequired = true
+				break
+			}
+		}
+	}
+	return isRequired
+}
+
 // returns the type referred to by schema after resolving all dependencies
 func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string, err error) {
 	if len(schema.Definitions) > 0 {
@@ -107,15 +130,7 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 	typ = "interface{}"
 	types, isMultiType := schema.MultiType()
 	isNullable := false
-	isRequired := false
-	if schema.Parent != nil {
-		for _, field := range schema.Parent.Required {
-			if getGolangName(field) == schemaName {
-				isRequired = true
-				break
-			}
-		}
-	}
+	isRequired := g.isRequired(schemaName, schema)
 	if len(types) > 0 {
 		for _, schemaType := range types {
 			if schemaType == "null" {
