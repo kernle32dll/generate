@@ -3,6 +3,7 @@ package test
 import (
 	"encoding/json"
 	gen "github.com/michalq/generate/test/additionalPropertiesMarshal_gen"
+	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"
 )
@@ -83,8 +84,8 @@ func TestApTrueProp(t *testing.T) {
 		}
 	}
 
-	if ap.Stuff != "xyz" {
-		t.Fatalf("invalid stuff value: \"%s\"", ap.Stuff)
+	if ap.Stuff == nil || *ap.Stuff != "xyz" {
+		t.Fatalf("invalid stuff value: \"%s\"", *ap.Stuff)
 	}
 }
 
@@ -177,48 +178,38 @@ func TestApFalseNoProp(t *testing.T) {
 
 
 func TestApFalseProp(t *testing.T) {
-	dataBad1 := `{"a": "b", "c": 42, "stuff": "xyz"}`
-	dataBad2 := `{"a": "b", "c": 42}`
-	dataGood1 := `{"stuff": "xyz"}`
-	dataGood2 := `{}`
 
-	{
+	t.Run("it should return error for JSON that contains additional data", func(t *testing.T) {
+		dataBad1 := `{"a": "b", "c": 42, "stuff": "xyz"}`
 		ap := gen.ApFalseProp{}
 		err := json.Unmarshal([]byte(dataBad1), &ap)
-		if err == nil {
-			t.Fatalf("should have returned an error, required field missing")
-		}
-	}
+		assert.NotNil(t, err)
+	})
 
-	{
+	t.Run("it should return error for JSON that contains additional data", func(t *testing.T) {
+		dataBad2 := `{"a": "b", "c": 42}`
 		ap := gen.ApFalseProp{}
 		err := json.Unmarshal([]byte(dataBad2), &ap)
-		if err == nil {
-			t.Fatalf("should have returned an error, required field missing")
-		}
-	}
+		assert.NotNil(t, err)
+	})
 
-	{
+	t.Run("it should return xyz for provided data", func(t *testing.T) {
+		dataGood1 := `{"stuff": "xyz"}`
 		ap := gen.ApFalseProp{}
 		err := json.Unmarshal([]byte(dataGood1), &ap)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ap.Stuff != "xyz" {
-			t.Fatalf("invalid stuff value: \"%s\"", ap.Stuff)
-		}
-	}
 
-	{
+		assert.Nil(t, err)
+		assert.NotNil(t, ap.Stuff)
+		assert.Equal(t, "xyz", *ap.Stuff)
+	})
+
+	t.Run("it should return nil for property that is not provided", func(t *testing.T) {
+		dataGood2 := `{}`
 		ap := gen.ApFalseProp{}
 		err := json.Unmarshal([]byte(dataGood2), &ap)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if ap.Stuff != "" {
-			t.Fatalf("invalid stuff value: \"%s\"", ap.Stuff)
-		}
-	}
+		assert.Nil(t, err)
+		assert.Nil(t, ap.Stuff)
+	})
 
 	ap := gen.ApFalseProp{}
 	if _, ok := reflect.TypeOf(ap).FieldByName("AdditionalProperties"); ok {
@@ -227,46 +218,42 @@ func TestApFalseProp(t *testing.T) {
 }
 
 func TestApFalseReqProp(t *testing.T) {
-	dataBad1 := `{"a": "b", "c": 42, "stuff": "xyz"}`
-	dataBad2 := `{"a": "b", "c": 42}`
-	dataBad3 := `{}`
-	dataGood := `{"stuff": "xyz"}`
 
-	{
+	t.Run("it should return error since json have additional fields, but schema forbids it", func(t *testing.T) {
+		dataBad1 := `{"a": "b", "c": 42, "stuff": "xyz"}`
 		ap := gen.ApFalseReqProp{}
 		err := json.Unmarshal([]byte(dataBad1), &ap)
-		if err == nil {
-			t.Fatalf("should have returned an error, required field missing")
-		}
-	}
-	
-	{
+		assert.NotNil(t, err)
+	})
+
+	t.Run("it should return error since json have additional fields and does not have required field", func(t *testing.T) {
+		dataBad2 := `{"a": "b", "c": 42}`
 		ap := gen.ApFalseReqProp{}
 		err := json.Unmarshal([]byte(dataBad2), &ap)
-		if err == nil {
-			t.Fatalf("should have returned an error, required field missing")
-		}
-	}
+		assert.NotNil(t, err)
+	})
 
-	{
+	t.Run("it should return error since required field is missing", func(t *testing.T) {
+		dataBad3 := `{}`
 		ap := gen.ApFalseReqProp{}
 		err := json.Unmarshal([]byte(dataBad3), &ap)
-		if err == nil {
-			t.Fatalf("should have returned an error, required field missing")
+		assert.NotNil(t, err)
+	})
+
+	t.Run("it should generate struct without additional fields", func(t *testing.T) {
+		dataGood := `{"stuff": "xyz"}`
+		ap := gen.ApFalseReqProp{}
+		err := json.Unmarshal([]byte(dataGood), &ap)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
 
-	ap := gen.ApFalseReqProp{}
-	err := json.Unmarshal([]byte(dataGood), &ap)
-	if err != nil {
-		t.Fatal(err)
-	}
+		if _, ok := reflect.TypeOf(ap).FieldByName("AdditionalProperties"); ok {
+			t.Fatalf("AdditionalProperties was generated where it should not have been")
+		}
 
-	if _, ok := reflect.TypeOf(ap).FieldByName("AdditionalProperties"); ok {
-		t.Fatalf("AdditionalProperties was generated where it should not have been")
-	}
-
-	if ap.Stuff != "xyz" {
-		t.Fatalf("invalid stuff value: \"%s\"", ap.Stuff)
-	}
+		if ap.Stuff != "xyz" {
+			t.Fatalf("invalid stuff value: \"%s\"", ap.Stuff)
+		}
+	})
 }

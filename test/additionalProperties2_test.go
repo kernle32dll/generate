@@ -10,6 +10,7 @@ import (
 )
 
 func TestMarshalUnmarshal(t *testing.T) {
+	property1 := "test"
 	params := []struct {
 		Name       string
 		Strct      additionalProperties2.AdditionalProperties
@@ -18,10 +19,10 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{
 			Name: "Base Object",
 			Strct: additionalProperties2.AdditionalProperties{
-				Property1: "test",
+				Property1: &property1,
 			},
 			Validation: func(t *testing.T, prop *additionalProperties2.AdditionalProperties) {
-				if prop.Property1 != "test" {
+				if *prop.Property1 != "test" {
 					t.Fatal("property1 != test")
 				}
 			},
@@ -39,7 +40,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 						"red": {
 							"blue": {
 								Color: "green",
-								Conditions: []*additionalProperties2.ConditionsItems{
+								Conditions: []*additionalProperties2.ConditionsItem{
 									{Name: "dry"},
 								},
 								Density: 42.42,

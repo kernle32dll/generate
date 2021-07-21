@@ -258,7 +258,7 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 		Fields:      make(map[string]Field, len(schema.Properties)),
 	}
 	// cache the object name in case any sub-schemas recursively reference it
-	schema.GeneratedType = "*" + name
+	schema.GeneratedType = name
 	// regular properties
 	for propKey, prop := range schema.Properties {
 		fieldName := getGolangName(propKey)

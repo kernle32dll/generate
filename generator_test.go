@@ -87,8 +87,8 @@ func TestFieldGeneration(t *testing.T) {
 
 	testField("it should render pointer type for not required value",
 		g.Structs["TestFieldGeneration"].Fields["Property1"], "property1", "Property1", "*string", false, t)
-	testField("it should render pointer type for Address",
-		g.Structs["TestFieldGeneration"].Fields["Property2"], "property2", "Property2", "*Address", true, t)
+	testField("it should render non-nil type for Address since it is required",
+		g.Structs["TestFieldGeneration"].Fields["Property2"], "property2", "Property2", "Address", true, t)
 	testField("it should render pointer type for SubObj1",
 		g.Structs["TestFieldGeneration"].Fields["Property3"], "property3", "Property3", "*SubObj1", false, t)
 	testField("it should render map of int for additional properties of type int",
@@ -181,12 +181,12 @@ func TestFieldGenerationWithArrayReferences(t *testing.T) {
 		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property1"], "property1", "Property1", "string", true, t)
 	testField("it should create pointer value if field is not required",
 		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property5"], "property5", "Property5", "*string", false, t)
-	testField("it should create array of referenced type",
-		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property2"], "property2", "Property2", "[]*Address", true, t)
+	testField("it should create array of non-nil Address since it is element of array",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property2"], "property2", "Property2", "[]Address", true, t)
 	testField("it should create a map that additional properties are int",
 		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property3"], "property3", "Property3", "[]map[string]int", false, t)
-	testField("it should create array of array of object",
-		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property4"], "property4", "Property4", "[][]*Inner", false, t)
+	testField("it should create array of array of non-nil Inner since it is element of array",
+		g.Structs["TestFieldGenerationWithArrayReferences"].Fields["Property4"], "property4", "Property4", "[][]Inner", false, t)
 }
 
 func testField(testName string, actual Field, expectedJSONName string, expectedName string, expectedType string, expectedToBeRequired bool, t *testing.T) {
