@@ -2,6 +2,55 @@
 
 Generates Go (golang) Structs and Validation code from JSON schema.
 
+# Differences between original lib
+
+## Rendering enums
+
+This
+```json
+{
+  "type": "object",
+  "required": [
+    "currencyCode"
+  ],
+  "properties": {
+    "currencyCode": {
+      "type": "string",
+      "enum": [
+        "PLN",
+        "USD",
+        "EUR"
+      ]
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
+```
+Will generate code
+```go
+// EnumCurrencyCode
+type EnumCurrencyCode string
+const (
+    EnumCurrencyCodeEUR EnumCurrencyCode = "EUR"
+    EnumCurrencyCodePLN EnumCurrencyCode = "PLN"
+    EnumCurrencyCodeUSD EnumCurrencyCode = "USD"
+)
+
+// Root 
+type Root struct {
+    CurrencyCode EnumCurrencyCode `json:"currencyCode" valid:"required"`
+}
+```
+## Required and not required field rendering
+
+All fields that are not required are treated as nullable, since its value can be undefined.
+
+If given field is an array item or map value then its value is always required (unless it is nullable). Since value in map or array cannot be undefined.
+
+## Objects rendering
+ 
+Objects are rendered as value unless they are not required or nullable.
+
 # Requirements
 
 * Go 1.8+
@@ -11,7 +60,7 @@ Generates Go (golang) Structs and Validation code from JSON schema.
 Install
 
 ```console
-$ go get -u github.com/a-h/generate/...
+$ go get -u github.com/michalq/generate/...
 ```
 
 or
