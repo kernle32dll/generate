@@ -1,3 +1,5 @@
+[![Build Status](https://app.travis-ci.com/michalq/generate.svg?branch=master)](https://app.travis-ci.com/michalq/generate)
+
 # generate
 
 Generates Go (golang) Structs and Validation code from JSON schema.
