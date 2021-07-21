@@ -53,7 +53,7 @@ Objects are rendered as value unless they are not required or nullable.
 
 # Requirements
 
-* Go 1.8+
+* Go 1.13+
 
 # Usage
 

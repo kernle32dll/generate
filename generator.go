@@ -189,7 +189,7 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 func (g *Generator) processEnum(fieldName, primitiveTypeName string, isNullable bool, schema *Schema) (string, error) {
 	// For now only string enum is handled
 	if primitiveTypeName != "string" && primitiveTypeName != "*string" && primitiveTypeName != "*int" && primitiveTypeName != "int" {
-		return "", errors.New(fmt.Sprintf("only enum type strings handled %+v", primitiveTypeName))
+		return "", fmt.Errorf("only enum type strings handled %+v", primitiveTypeName)
 	}
 	typeName := "Enum" + normalizeStringToName(fieldName)
 	g.Aliases[typeName] = Field{
@@ -487,6 +487,7 @@ type Field struct {
 	Description string
 }
 
+// ConstDefinition defines constant definition.
 type ConstDefinition struct {
 	// The golang name, e.g. "Address1"
 	Name string

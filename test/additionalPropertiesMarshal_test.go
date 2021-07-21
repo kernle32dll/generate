@@ -20,7 +20,7 @@ func TestApRefReqProp(t *testing.T) {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func TestApTrueNoProp(t *testing.T) {
-	
+
 	noPropData := `{"a": "b", "c": 42 }`
 
 	ap := gen.ApTrueNoProp{}
@@ -51,7 +51,6 @@ func TestApTrueNoProp(t *testing.T) {
 		}
 	}
 }
-
 
 func TestApTrueProp(t *testing.T) {
 	data := `{"a": "b", "c": 42, "stuff": "xyz" }`
@@ -175,7 +174,6 @@ func TestApFalseNoProp(t *testing.T) {
 		}
 	}
 }
-
 
 func TestApFalseProp(t *testing.T) {
 

@@ -1,6 +1,7 @@
 PKG := .
 CMD := $(PKG)/cmd/schema-generate
 BIN := schema-generate
+GO111MODULE=on
 
 # Build
 
