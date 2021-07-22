@@ -1,0 +1,19 @@
+{
+  "type": "object",
+  "required": [
+    "countryCode"
+  ],
+  "properties": {
+    "countryCode": {
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "DE",
+            "PL"
+          ]
+        }
+      ]
+    }
+  }
+}

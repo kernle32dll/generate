@@ -42,7 +42,7 @@ func (g *Generator) CreateTypes() (err error) {
 	// extract the types
 	for _, schema := range g.schemas {
 		name := g.getSchemaName("", schema)
-		rootType, err := g.processSchema(name, schema)
+		rootType, err := g.processSchema(name, schema, false)
 		if err != nil {
 			return err
 		}
@@ -63,12 +63,43 @@ func (g *Generator) CreateTypes() (err error) {
 
 // process a block of definitions
 func (g *Generator) processDefinitions(schema *Schema) error {
+
 	for key, subSchema := range schema.Definitions {
-		if _, err := g.processSchema(getGolangName(key), subSchema); err != nil {
+		if _, err := g.processSchema(getGolangName(key), subSchema, false); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// process a block of OneOf
+func (g *Generator) processOneOf(
+	schemaName string, schema *Schema, withPointer bool,
+) (string, error) {
+
+	isNullable := false
+	types := make([]string, 0)
+	for _, subSchema := range schema.OneOf {
+		subSchemaType, _ := subSchema.Type()
+		if subSchemaType == "null" {
+			isNullable = true
+			continue
+		}
+		oneOfSchemaType, err := g.processSchema(
+			getGolangName(schemaName+strings.Title(subSchemaType)), subSchema, withPointer,
+		)
+		if err != nil {
+			return "", err
+		}
+		types = append(types, oneOfSchemaType)
+	}
+	if len(types) == 1 {
+		if isNullable || withPointer {
+			return "*" + types[0], nil
+		}
+		return types[0], nil
+	}
+	return "interface{}", nil
 }
 
 // process a reference string
@@ -84,7 +115,7 @@ func (g *Generator) processReference(schema *Schema) (string, error) {
 	if refSchema.GeneratedType == "" {
 		// reference is not resolved yet. Do that now.
 		refSchemaName := g.getSchemaName("", refSchema)
-		typeName, err := g.processSchema(refSchemaName, refSchema)
+		typeName, err := g.processSchema(refSchemaName, refSchema, g.isWithPointer(refSchemaName, schema))
 		if err != nil {
 			return "", err
 		}
@@ -93,34 +124,44 @@ func (g *Generator) processReference(schema *Schema) (string, error) {
 	return refSchema.GeneratedType, nil
 }
 
-func (g *Generator) isRequired(schemaName string, schema *Schema) bool {
-	isRequired := false
-	if schema.Parent != nil {
-		tp, _ := schema.Parent.Type()
-		// If this is subtype of map or array, then value is always required.
-		// Otherwise map element or array item just not exist. Value still can be nullable.
-		if schema.Parent.AdditionalProperties != nil &&
-			schema.Parent.AdditionalProperties.AdditionalPropertiesBool == nil {
-			return true
-		}
-		if tp == "array" {
-			return true
-		}
-		for _, field := range schema.Parent.Required {
-			if getGolangName(field) == schemaName {
-				isRequired = true
-				break
-			}
+func (g *Generator) isWithPointer(schemaName string, schema *Schema) bool {
+
+	isWithPointer := true
+	tp, _ := schema.Type()
+	// If this is subtype of map or array, then value is always required.
+	// Otherwise map element or array item just not exist. Value still can be nullable.
+	if schema.AdditionalProperties != nil &&
+		schema.AdditionalProperties.AdditionalPropertiesBool == nil {
+		return true
+	}
+	if tp == "array" {
+		return true
+	}
+	for _, field := range schema.Required {
+		if getGolangName(field) == schemaName {
+			isWithPointer = false
+			break
 		}
 	}
-	return isRequired
+	return isWithPointer
 }
 
 // returns the type referred to by schema after resolving all dependencies
-func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string, err error) {
+func (g *Generator) processSchema(schemaName string, schema *Schema, withPointer bool) (typ string, err error) {
 	if len(schema.Definitions) > 0 {
-		g.processDefinitions(schema)
+		if err := g.processDefinitions(schema); err != nil {
+			return "", err
+		}
 	}
+
+	if len(schema.OneOf) > 0 {
+		oneOfType, err := g.processOneOf(schemaName, schema, withPointer)
+		if err != nil {
+			return "", err
+		}
+		return oneOfType, nil
+	}
+
 	schema.FixMissingTypeValue()
 	if schema.Reference != "" {
 		return g.processReference(schema)
@@ -130,7 +171,6 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 	typ = "interface{}"
 	types, isMultiType := schema.MultiType()
 	isNullable := false
-	isRequired := g.isRequired(schemaName, schema)
 	if len(types) > 0 {
 		for _, schemaType := range types {
 			if schemaType == "null" {
@@ -166,13 +206,13 @@ func (g *Generator) processSchema(schemaName string, schema *Schema) (typ string
 			case "null":
 				// Skip
 			default:
-				rv, err := getPrimitiveTypeName(schemaType, "", isNullable || !isRequired)
+				rv, err := getPrimitiveTypeName(schemaType, "", isNullable || withPointer)
 				if err != nil {
 					return "", err
 				}
 				if !isMultiType {
 					if len(schema.Enum) > 0 {
-						rv, err = g.processEnum(name, rv, isNullable || !isRequired, schema)
+						rv, err = g.processEnum(name, rv, isNullable || withPointer, schema)
 						if err != nil {
 							return "", err
 						}
@@ -224,7 +264,7 @@ func (g *Generator) processArray(name string, schema *Schema) (typeStr string, e
 
 	// subType: fallback name in case this array contains inline object without a title
 	subName := g.getSchemaName(name+"Item", schema.Items)
-	subTyp, err := g.processSchema(subName, schema.Items)
+	subTyp, err := g.processSchema(subName, schema.Items, false)
 	if err != nil {
 		return "", err
 	}
@@ -264,7 +304,7 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 		fieldName := getGolangName(propKey)
 		// calculate sub-schema name here, may not actually be used depending on type of schema!
 		subSchemaName := g.getSchemaName(fieldName, prop)
-		fieldType, err := g.processSchema(subSchemaName, prop)
+		fieldType, err := g.processSchema(subSchemaName, prop, g.isWithPointer(subSchemaName, schema))
 		if err != nil {
 			return "", err
 		}
@@ -284,7 +324,7 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 	if schema.AdditionalProperties != nil && schema.AdditionalProperties.AdditionalPropertiesBool == nil {
 		ap := (*Schema)(schema.AdditionalProperties)
 		apName := g.getSchemaName("", ap)
-		subTyp, err := g.processSchema(apName, ap)
+		subTyp, err := g.processSchema(apName, ap, false)
 		if err != nil {
 			return "", err
 		}
@@ -336,7 +376,6 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 		}
 	}
 	g.Structs[strct.Name] = strct
-	// objects are always a pointer
 	return getPrimitiveTypeName("object", name, true)
 }
 
@@ -377,7 +416,7 @@ func getPrimitiveTypeName(schemaType string, subType string, pointer bool) (name
 		return prefix + "string", nil
 	}
 
-	return "undefined", fmt.Errorf("failed to get a primitive type for schemaType %s and subtype %s",
+	return "undefined", fmt.Errorf("failed to get a primitive type for schemaType: '%s' and subtype: '%s'",
 		schemaType, subType)
 }
 

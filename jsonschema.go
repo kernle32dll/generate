@@ -154,9 +154,9 @@ func (schema *Schema) Type() (firstOrDefault string, multiple bool) {
 
 // MultiType returns "type" as an array
 func (schema *Schema) MultiType() ([]string, bool) {
-	if len(schema.OneOf) > 1 || len(schema.AnyOf) > 1 {
-		return nil, true
-	}
+	//if len(schema.OneOf) > 1 || len(schema.AnyOf) > 1 {
+	//	return nil, true
+	//}
 
 	// We've got a single value, e.g. { "type": "object" }
 	if ts, ok := schema.TypeValue.(string); ok {
@@ -165,7 +165,7 @@ func (schema *Schema) MultiType() ([]string, bool) {
 
 	// We could have multiple types in the type value, e.g. { "type": [ "object", "array" ] }
 	if a, ok := schema.TypeValue.([]interface{}); ok {
-		rv := []string{}
+		rv := make([]string, 0)
 		for _, n := range a {
 			if s, ok := n.(string); ok {
 				rv = append(rv, s)
@@ -309,15 +309,16 @@ func (schema *Schema) ensureSchemaKeyword() error {
 
 // FixMissingTypeValue is backwards compatible, guessing the users intention when they didn't specify a type.
 func (schema *Schema) FixMissingTypeValue() {
-	if schema.TypeValue == nil {
-		if schema.Reference == "" && len(schema.Properties) > 0 {
-			schema.TypeValue = "object"
-			return
-		}
-		if schema.Items != nil {
-			schema.TypeValue = "array"
-			return
-		}
+	if schema.TypeValue != nil {
+		return
+	}
+	if schema.Reference == "" && len(schema.Properties) > 0 {
+		schema.TypeValue = "object"
+		return
+	}
+	if schema.Items != nil {
+		schema.TypeValue = "array"
+		return
 	}
 }
 

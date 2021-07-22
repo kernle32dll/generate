@@ -31,8 +31,8 @@ func TestMarshalUnmarshal(t *testing.T) {
 			Name: "Property7",
 			Strct: additionalProperties2.AdditionalProperties{
 				Property7: &additionalProperties2.Property7{
-					StreetNumber: 69,
-					StreetName:   "Elm St",
+					StreetNumber: func() *int { var val int = 69; return &val }(),
+					StreetName:   func() *string { var val string = "Elm St"; return &val }(),
 					PoBox: &additionalProperties2.PoBox{
 						Suburb: "Smallville",
 					},
@@ -52,7 +52,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 			},
 			Validation: func(t *testing.T, prop *additionalProperties2.AdditionalProperties) {
 
-				if prop.Property7.StreetNumber != 69 {
+				if *prop.Property7.StreetNumber != 69 {
 					t.Fatal("wrong value")
 				}
 

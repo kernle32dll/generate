@@ -110,7 +110,7 @@ func TestFieldGeneration(t *testing.T) {
 		g.Structs["SubObj4a"].Fields["Subproperty1"], "subproperty1", "Subproperty1", "*int", false, t)
 
 	testField("it should render name as *string since is not required",
-		g.Structs["SubObj5"].Fields["Name"], "name", "Name", "string", false, t)
+		g.Structs["SubObj5"].Fields["Name"], "name", "Name", "*string", false, t)
 	testField("it should render SubObj5 with additional properties as string map of int ",
 		g.Structs["SubObj5"].Fields["AdditionalProperties"], "-", "AdditionalProperties", "map[string]int", false, t)
 
@@ -713,19 +713,19 @@ func TestTypeAliases(t *testing.T) {
 		structs, aliases int
 	}{
 		{
-			gotype:  "*string",
+			gotype:  "string",
 			input:   &Schema{TypeValue: "string"},
 			structs: 0,
 			aliases: 1,
 		},
 		{
-			gotype:  "*int",
+			gotype:  "int",
 			input:   &Schema{TypeValue: "integer"},
 			structs: 0,
 			aliases: 1,
 		},
 		{
-			gotype:  "*bool",
+			gotype:  "bool",
 			input:   &Schema{TypeValue: "boolean"},
 			structs: 0,
 			aliases: 1,
