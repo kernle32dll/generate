@@ -53,6 +53,12 @@ If given field is an array item or map value then its value is always required (
  
 Objects are rendered as value unless they are not required or nullable.
 
+## OneOf rendering
+
+If oneOf consists of two values and one of them is null then type is rendered with pointer.
+
+If oneOf consists of more than two values then it is rendered as interface{}, but all types if not primitive will be created.
+
 # Requirements
 
 * Go 1.13+
