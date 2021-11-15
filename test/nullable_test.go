@@ -2,8 +2,8 @@ package test
 
 import (
 	"encoding/json"
-	nullableoneof "github.com/michalq/generate/test/nullableoneof_gen"
-	nullabletype "github.com/michalq/generate/test/nullabletype_gen"
+	nullableoneof "github.com/kernle32dll/generate/test/nullableoneof_gen"
+	nullabletype "github.com/kernle32dll/generate/test/nullabletype_gen"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

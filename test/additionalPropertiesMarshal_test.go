@@ -2,7 +2,7 @@ package test
 
 import (
 	"encoding/json"
-	gen "github.com/michalq/generate/test/additionalPropertiesMarshal_gen"
+	gen "github.com/kernle32dll/generate/test/additionalPropertiesMarshal_gen"
 	"github.com/stretchr/testify/assert"
 	"reflect"
 	"testing"

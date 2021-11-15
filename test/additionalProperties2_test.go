@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/michalq/generate/test/additionalProperties2_gen"
+	"github.com/kernle32dll/generate/test/additionalProperties2_gen"
 )
 
 func TestMarshalUnmarshal(t *testing.T) {

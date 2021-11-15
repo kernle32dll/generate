@@ -2,7 +2,7 @@ package test
 
 import (
 	"encoding/json"
-	"github.com/michalq/generate/test/example1_gen"
+	"github.com/kernle32dll/generate/test/example1_gen"
 	"testing"
 )
 

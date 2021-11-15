@@ -2,7 +2,7 @@ package test
 
 import (
 	"encoding/json"
-	oneofonlyoneelement "github.com/michalq/generate/test/oneofonlyoneelement_gen"
+	oneofonlyoneelement "github.com/kernle32dll/generate/test/oneofonlyoneelement_gen"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

@@ -8,7 +8,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/michalq/generate"
+	"github.com/kernle32dll/generate"
 )
 
 var (

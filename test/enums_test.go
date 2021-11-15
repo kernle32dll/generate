@@ -2,7 +2,7 @@ package test
 
 import (
 	"encoding/json"
-	enums "github.com/michalq/generate/test/enums_gen"
+	enums "github.com/kernle32dll/generate/test/enums_gen"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

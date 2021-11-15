@@ -1,4 +1,4 @@
-[![Build Status](https://app.travis-ci.com/michalq/generate.svg?branch=master)](https://app.travis-ci.com/michalq/generate)
+[![Build Status](https://app.travis-ci.com/kernle32dll/generate.svg?branch=master)](https://app.travis-ci.com/kernle32dll/generate)
 
 # generate
 
@@ -68,7 +68,7 @@ If oneOf consists of more than two values then it is rendered as interface{}, bu
 Install
 
 ```console
-$ go get -u github.com/michalq/generate/...
+$ go get -u github.com/kernle32dll/generate/...
 ```
 
 or

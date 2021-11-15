@@ -1,7 +1,7 @@
 package test
 
 import (
-	"github.com/michalq/generate/test/abandoned_gen"
+	"github.com/kernle32dll/generate/test/abandoned_gen"
 	"testing"
 )
 
