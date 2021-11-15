@@ -84,7 +84,11 @@ func Output(w io.Writer, g *Generator, pkg string) {
 		fmt.Fprintln(w, "const (")
 		for _, k := range getOrderedConstNames(consts) {
 			a := consts[k]
-			fmt.Fprintf(w, "%s %s = \"%s\"\n", a.Name, a.Type, a.Value)
+			if g.Aliases[a.Type].Type == "string" {
+				fmt.Fprintf(w, "%s %s = %q\n", a.Name, a.Type, a.Value)
+			} else {
+				fmt.Fprintf(w, "%s %s = %s\n", a.Name, a.Type, a.Value)
+			}
 		}
 		fmt.Fprintln(w, ")")
 	}

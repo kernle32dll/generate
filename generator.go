@@ -232,9 +232,15 @@ func (g *Generator) processEnum(fieldName, primitiveTypeName string, isNullable 
 		return "", fmt.Errorf("only enum type strings handled %+v", primitiveTypeName)
 	}
 	typeName := "Enum" + normalizeStringToName(fieldName)
+
+	fieldType := "string"
+	if primitiveTypeName == "*int" || primitiveTypeName == "int" {
+		fieldType = "int"
+	}
+
 	g.Aliases[typeName] = Field{
 		Name: typeName,
-		Type: "string",
+		Type: fieldType,
 	}
 	for _, enumVal := range schema.Enum {
 		if enumVal == nil {
