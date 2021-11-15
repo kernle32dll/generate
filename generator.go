@@ -103,7 +103,7 @@ func (g *Generator) processOneOf(
 }
 
 // process a reference string
-func (g *Generator) processReference(schema *Schema) (string, error) {
+func (g *Generator) processReference(schema *Schema, withPointer bool) (string, error) {
 	schemaPath := g.resolver.GetPath(schema)
 	if schema.Reference == "" {
 		return "", errors.New("processReference empty reference: " + schemaPath)
@@ -115,7 +115,7 @@ func (g *Generator) processReference(schema *Schema) (string, error) {
 	if refSchema.GeneratedType == "" {
 		// reference is not resolved yet. Do that now.
 		refSchemaName := g.getSchemaName("", refSchema)
-		typeName, err := g.processSchema(refSchemaName, refSchema, g.isWithPointer(refSchemaName, schema))
+		typeName, err := g.processSchema(refSchemaName, refSchema, withPointer)
 		if err != nil {
 			return "", err
 		}
@@ -164,7 +164,7 @@ func (g *Generator) processSchema(schemaName string, schema *Schema, withPointer
 
 	schema.FixMissingTypeValue()
 	if schema.Reference != "" {
-		return g.processReference(schema)
+		return g.processReference(schema, withPointer)
 	}
 
 	// if we have multiple schema types, the golang type will be interface{}
@@ -188,7 +188,7 @@ func (g *Generator) processSchema(schemaName string, schema *Schema, withPointer
 			}
 			switch schemaType {
 			case "object":
-				rv, err := g.processObject(name, schema)
+				rv, err := g.processObject(name, schema, isNullable || withPointer)
 				if err != nil {
 					return "", err
 				}
@@ -290,7 +290,7 @@ func (g *Generator) processArray(name string, schema *Schema) (typeStr string, e
 // name: name of the struct (calculated by caller)
 // schema: detail incl properties & child objects
 // returns: generated type
-func (g *Generator) processObject(name string, schema *Schema) (typ string, err error) {
+func (g *Generator) processObject(name string, schema *Schema, pointer bool) (typ string, err error) {
 	strct := Struct{
 		ID:          schema.ID(),
 		Name:        name,
@@ -376,7 +376,7 @@ func (g *Generator) processObject(name string, schema *Schema) (typ string, err 
 		}
 	}
 	g.Structs[strct.Name] = strct
-	return getPrimitiveTypeName("object", name, true)
+	return getPrimitiveTypeName("object", name, pointer)
 }
 
 func contains(s []string, e string) bool {
@@ -422,11 +422,11 @@ func getPrimitiveTypeName(schemaType string, subType string, pointer bool) (name
 
 // return a name for this (sub-)schema.
 func (g *Generator) getSchemaName(keyName string, schema *Schema) string {
-	if len(schema.Title) > 0 {
-		return getGolangName(schema.Title)
-	}
 	if keyName != "" {
 		return getGolangName(keyName)
+	}
+	if len(schema.Title) > 0 {
+		return getGolangName(schema.Title)
 	}
 	if schema.Parent == nil {
 		return "Root"
