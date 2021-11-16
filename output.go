@@ -30,15 +30,50 @@ func getOrderedStructNames(m map[string]Struct) []string {
 	return keys
 }
 
-func getOrderedConstNames(m map[string]ConstDefinition) []string {
-	keys := make([]string, len(m))
-	idx := 0
-	for k := range m {
-		keys[idx] = k
-		idx++
+type ByLengthAndLex []string
+
+func (a ByLengthAndLex) Len() int {
+	return len(a)
+}
+func (a ByLengthAndLex) Less(i, j int) bool {
+	iLen := len(a[i])
+	jLen := len(a[j])
+	if iLen != jLen {
+		return iLen < jLen
 	}
-	sort.Strings(keys)
-	return keys
+
+	return a[i] < a[j]
+}
+func (a ByLengthAndLex) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+func getOrderedConstNames(m map[string]ConstDefinition) []string {
+	typeToKeyMap := make(map[string][]string)
+	var constTypes []string
+	for k, v := range m {
+		newType := true
+		for _, e := range constTypes {
+			if e == v.Type {
+				newType = false
+				break
+			}
+		}
+		if newType {
+			constTypes = append(constTypes, v.Type)
+		}
+
+		typeToKeyMap[v.Type] = append(typeToKeyMap[v.Type], k)
+	}
+
+	sort.Strings(constTypes)
+
+	var finalSlice []string
+	for _, constType := range constTypes {
+		typeValues := typeToKeyMap[constType]
+		sort.Sort(ByLengthAndLex(typeValues))
+		finalSlice = append(finalSlice, typeValues...)
+	}
+
+	return finalSlice
 }
 
 // Output generates code and writes to w.
@@ -82,13 +117,20 @@ func Output(w io.Writer, g *Generator, pkg string) {
 
 	if len(consts) > 0 {
 		fmt.Fprintln(w, "const (")
-		for _, k := range getOrderedConstNames(consts) {
+		prevType := ""
+		for i, k := range getOrderedConstNames(consts) {
 			a := consts[k]
+
+			if i != 0 && prevType != a.Type {
+				fmt.Fprintln(w, "")
+			}
 			if g.Aliases[a.Type].Type == "string" {
 				fmt.Fprintf(w, "%s %s = %q\n", a.Name, a.Type, a.Value)
 			} else {
 				fmt.Fprintf(w, "%s %s = %s\n", a.Name, a.Type, a.Value)
 			}
+
+			prevType = a.Type
 		}
 		fmt.Fprintln(w, ")")
 	}
