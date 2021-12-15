@@ -79,7 +79,7 @@ type Schema struct {
 	PathElement string `json:"-"`
 
 	// calculated struct name of this object, cached here
-	GeneratedType string `json:"-"`
+	GeneratedType map[bool]string `json:"-"`
 }
 
 // UnmarshalJSON handles unmarshalling AdditionalProperties from JSON.

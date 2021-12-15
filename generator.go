@@ -112,7 +112,7 @@ func (g *Generator) processReference(schema *Schema, withPointer bool) (string, 
 	if err != nil {
 		return "", errors.New("processReference: reference \"" + schema.Reference + "\" not found at \"" + schemaPath + "\"")
 	}
-	if refSchema.GeneratedType == "" {
+	if refSchema.GeneratedType[withPointer] == "" {
 		// reference is not resolved yet. Do that now.
 		refSchemaName := g.getSchemaName("", refSchema)
 		typeName, err := g.processSchema(refSchemaName, refSchema, withPointer)
@@ -121,7 +121,7 @@ func (g *Generator) processReference(schema *Schema, withPointer bool) (string, 
 		}
 		return typeName, nil
 	}
-	return refSchema.GeneratedType, nil
+	return refSchema.GeneratedType[withPointer], nil
 }
 
 func (g *Generator) isWithPointer(schemaName string, schema *Schema) bool {
@@ -304,7 +304,7 @@ func (g *Generator) processObject(name string, schema *Schema, pointer bool) (ty
 		Fields:      make(map[string]Field, len(schema.Properties)),
 	}
 	// cache the object name in case any sub-schemas recursively reference it
-	schema.GeneratedType = name
+	//schema.GeneratedType = name
 	// regular properties
 	for propKey, prop := range schema.Properties {
 		fieldName := getGolangName(propKey)
